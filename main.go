@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
 
@@ -16,12 +14,6 @@ func main() {
 	}
 
 	credentials := GetDiscordCredentials()
-
-	_, err = discordgo.New(fmt.Sprintf("Bot %s", credentials.botToken))
-	if err != nil {
-		log.Fatal("Failed to initialise discordgo bot.")
-		return
-	}
 
 	err = UpsertGlobalApplicationCommands(credentials)
 	if err != nil {
@@ -35,8 +27,10 @@ func main() {
 
 	log.Print("Successfully updated app commands!")
 
+	client := NewDiscordClient(credentials)
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		interactionHandler(w, r, credentials)
+		interactionHandler(w, r, client)
 	}
 
 	http.HandleFunc("/api/interaction", handler)

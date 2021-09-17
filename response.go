@@ -1,19 +1,30 @@
 package main
 
-import "fmt"
+import (
+	"github.com/tidwall/sjson"
+)
 
-func makeInteractionResponse(interactionType int, content string, components string, ephemeral bool) string {
-	flags := 0
+func MakeInteractionResponse(interactionType int, content string, components string, ephemeral bool) string {
+	json, _ := sjson.Set(`{
+		"data": {}
+	}`, "data.content", content)
+
+	json, _ = sjson.Set(json, "type", interactionType)
+
 	if ephemeral {
-		flags = 64
+		json, _ = sjson.Set(json, "data.flags", 64)
 	}
 
-	return fmt.Sprintf(`{
-		"type": %d,
-		"data": {
-			"content": "%s",
-			"components": %s,
-			"flags": %d
-		}
-	}`, interactionType, content, components, flags)
+	json, _ = sjson.SetRaw(json, "data.components", components)
+
+	return json
+}
+
+func MakeInteractionErrorResponse(msg string) string {
+	json, _ := sjson.Set(`{
+		"type": 4,
+		"data": {"flags": 64}
+	}`, "data.content", msg)
+
+	return json
 }

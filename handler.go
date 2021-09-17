@@ -23,8 +23,8 @@ const (
 	InteractionResponseTypeDelayedComponentMessageEdit = 6
 )
 
-func interactionHandler(w http.ResponseWriter, r *http.Request, credentials DiscordCredentials) {
-	if !discordgo.VerifyInteraction(r, ed25519.PublicKey(credentials.publicKey)) {
+func interactionHandler(w http.ResponseWriter, r *http.Request, client DiscordClient) {
+	if !discordgo.VerifyInteraction(r, ed25519.PublicKey(client.Credentials.publicKey)) {
 		fmt.Fprintf(w, "Invalid Discord interaction.")
 		return
 	}
@@ -38,11 +38,11 @@ func interactionHandler(w http.ResponseWriter, r *http.Request, credentials Disc
 
 	w.Header().Set("Content-Type", "application/json")
 
-	interaction := string(body)
+	interaction := gjson.Parse(string(body))
 
 	log.Print(interaction)
 
-	interactionType := gjson.Get(interaction, "type").Int()
+	interactionType := interaction.Get("type").Int()
 
 	switch interactionType {
 	case InteractionTypePing:
@@ -52,20 +52,19 @@ func interactionHandler(w http.ResponseWriter, r *http.Request, credentials Disc
 		return
 	case InteractionTypeCommand:
 		log.Print("Command recognised!")
-		response := makeInteractionResponse(InteractionResponseTypeReply, "Hey thanks for sending a command!", `[
-			{
-				"type": 1,
-				"components": [
-					{
-						"custom_id": "button",
-						"type": 2,
-						"label": "I'm a button!",
-						"style": 1
-					}
-				]
-			}
-		]`, false)
-		fmt.Fprint(w, response)
+		name := interaction.Get("data.name").String()
+		handler := NamesToCommandHandlers[name]
+		if handler != nil {
+			fmt.Fprint(w, handler(interaction, client))
+		} else {
+			fmt.Fprintf(w, `{
+				"type": 4,
+				"data": {
+					"content": "Something went wrong. Try again later.",
+					"flags": 64
+				}
+			}`)
+		}
 		return
 	case InteractionTypeComponent:
 		fmt.Fprintf(w, `{
