@@ -1,7 +1,5 @@
 package main
 
-// Weeee!
-
 import (
 	"fmt"
 	"io/ioutil"
